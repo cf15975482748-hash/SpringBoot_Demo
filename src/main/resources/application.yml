@@ -4,7 +4,7 @@ Server:
 # 数据库配置（示例：MySQL）
 spring:
   datasource:
-    url: jdbc:mysql://localhost:33060/testdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/testdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
     password: password
     driver-class-name: com.mysql.cj.jdbc.Driver
