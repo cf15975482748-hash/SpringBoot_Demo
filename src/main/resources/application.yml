@@ -1,5 +1,5 @@
 Server:
-  port: 7999
+  port: 8080
 
 # 数据库配置（示例：MySQL）
 spring:
@@ -12,7 +12,7 @@ spring:
   # MyBatis 配置
   mybatis:
     mapper-locations: classpath:mapper/*.xml    # 映射文件位置
-    type-aliases-package: com.SpringBoot_Test.Controller  # 实体类包
+    type-aliases-package: com.SpringBoot_Test.Model  # 实体类包
 
 name: Hello World
 

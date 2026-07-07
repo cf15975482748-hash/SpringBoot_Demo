@@ -37,6 +37,12 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Thymeleaf Template Engine -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
         <!-- SpringBoot MyBatis Starter -->
         <dependency>
             <groupId>org.mybatis.spring.boot</groupId>
@@ -103,7 +109,7 @@
                         </exclude>
                     </excludes>
                     <!-- 指定主类 -->
-                    <mainClass>cn.com.SpringBoot_Test.SpringBootIn</mainClass>
+                    <mainClass>com.SpringBoot_Test.SpringBootIn</mainClass>
                     <!-- 生成可执行JAR -->
                     <executable>true</executable>
                     <!-- 包含系统范围依赖 -->
@@ -160,7 +166,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>cn.com.yingsoft.contact.ContactWebAppApplication</mainClass>
+                            <mainClass>com.SpringBoot_Test.SpringBootIn</mainClass>
                         </manifest>
                         <manifestEntries>
                             <Built-By>${user.name}</Built-By>

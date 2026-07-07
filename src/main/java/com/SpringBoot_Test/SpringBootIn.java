@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 // 扫描 Mapper 接口
-@MapperScan("com.springBoot_test.mapper")
+@MapperScan("com.SpringBoot_Test.Mapper")
 public class SpringBootIn {
     public static void main(String[] args) {
         SpringApplication.run(SpringBootIn.class, args);

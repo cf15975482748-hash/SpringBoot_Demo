@@ -5,31 +5,26 @@ import com.SpringBoot_Test.Model.User;
 import com.SpringBoot_Test.Mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 
-@RestController
+@Controller
 public class TestController {
 
-
-    // ====================== 1. 读取配置文件 ======================
-    @Value("${name}")
-    private String configName;
-
-    @GetMapping("/config")
-    public String getConfig() {
-        return "配置文件内容：" + configName;
-    }
-
-    // ====================== 2. 读取数据库 ======================
     @Autowired
     private UserMapper userMapper;
 
-    @GetMapping("/users")
-    public List<User> getUsers() {
-        return userMapper.findAll();
+    @GetMapping("/")
+    public String index(Model model) {
+        // 获取所有用户数据
+        List<User> users = userMapper.findAll();
+        // 将数据传递给前端模板
+        model.addAttribute("users", users);
+        // 返回 templates 目录下的 index.html
+        return "index";
     }
 }
 
