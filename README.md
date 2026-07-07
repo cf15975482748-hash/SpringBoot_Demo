@@ -13,6 +13,7 @@
 ### 2. 数据操作 (CRUD)
 - **添加/更新数据**：通过弹出式窗口录入数据。由于 ID 已预生成，添加数据本质上是更新对应 ID 行的内容。
 - **数据清空**：列表中的“清空”按钮带有二次确认逻辑，点击后将对应行的姓名和年龄置空，保留 ID。
+- **模糊查询**：支持在当前表中按姓名关键词进行模糊搜索（Like 匹配）。
 - **实时刷新**：支持一键刷新数据视图。
 
 ### 3. 严格的数据校验逻辑
@@ -38,7 +39,7 @@
 
 ### 2. 持久层 (Mapper)
 - [SearchMapper.java](src/main/java/com/SpringBoot_Test/Mapper/SearchMapper.java)：负责动态表名查询、表结构管理（创建/删除/查询表名）以及初始 ID 生成。
-- [UpdatedMapper.java](src/main/java/com/SpringBoot_Test/Mapper/UpdatedMapper.java)：负责具体数据的增删改操作。
+- [Mappers.java](src/main/java/com/SpringBoot_Test/Mapper/Mappers.java)：负责数据增删改及模糊查询。
 
 ### 3. 模型层 [User.java](src/main/java/com/SpringBoot_Test/Model/User.java)
 基础实体类，包含 `id`, `name`, `age` 字段。

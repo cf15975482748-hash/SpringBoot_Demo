@@ -3,7 +3,7 @@ package com.SpringBoot_Test.Controller;
 
 import com.SpringBoot_Test.Model.User;
 import com.SpringBoot_Test.Mapper.SearchMapper;
-import com.SpringBoot_Test.Mapper.UpdatedMapper;
+import com.SpringBoot_Test.Mapper.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -13,6 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.springframework.transaction.annotation.Transactional;
+import javax.servlet.http.HttpSession;
+
 @Controller
 public class TestController {
 
@@ -20,12 +23,12 @@ public class TestController {
     private SearchMapper searchMapper;
 
     @Autowired
-    private UpdatedMapper updatedMapper;
+    private Mappers mappers;
 
-    private String currentTable = "user";
+    private static final String TABLE_SESSION_KEY = "CURRENT_TABLE";
 
     @GetMapping("/")
-    public String index(Model model) {
+    public String index(@RequestParam(value = "searchName", required = false) String searchName, Model model, HttpSession session) {
         List<String> tables = searchMapper.getAllTables();
         model.addAttribute("tables", tables);
 
@@ -33,35 +36,59 @@ public class TestController {
             model.addAttribute("error", "没有任何表可查询，请新建一个表！");
             model.addAttribute("users", new ArrayList<>());
             model.addAttribute("currentTable", "无");
+            session.removeAttribute(TABLE_SESSION_KEY);
             return "index";
         }
 
-        // 如果当前表不在列表里，默认选第一个
-        if (!tables.contains(currentTable)) {
+        // 从 Session 获取当前表
+        String currentTable = (String) session.getAttribute(TABLE_SESSION_KEY);
+        
+        // 如果 Session 为空或表已不存在，重置为第一个可用表
+        if (currentTable == null || !tables.contains(currentTable)) {
             currentTable = tables.get(0);
+            session.setAttribute(TABLE_SESSION_KEY, currentTable);
         }
 
-        // 获取所有用户数据
-        List<User> users = searchMapper.findAll(currentTable);
-        // 将数据传递给前端模板
+        // 获取用户数据（如果提供了搜索名称，则进行模糊查询，否则获取全部数据）
+        List<User> users;
+        if (searchName != null && !searchName.trim().isEmpty()) {
+            users = mappers.searchByName(currentTable, searchName.trim());
+            model.addAttribute("searchName", searchName);
+        } else {
+            users = searchMapper.findAll(currentTable);
+        }
+        
         model.addAttribute("users", users);
         model.addAttribute("currentTable", currentTable);
-        // 返回 templates 目录下的 index.html
+        
         return "index";
     }
 
+    @PostMapping("/search")
+    public String search(@RequestParam("searchName") String searchName, Model model, HttpSession session) {
+        return index(searchName, model, session);
+    }
+
     @PostMapping("/switchTable")
-    public String switchTable(@RequestParam("tableName") String tableName) {
-        this.currentTable = tableName;
+    public String switchTable(@RequestParam("tableName") String tableName, HttpSession session) {
+        session.setAttribute(TABLE_SESSION_KEY, tableName);
         return "redirect:/";
     }
 
     @PostMapping("/createTable")
-    public String createTable(@RequestParam("tableName") String tableName, Model model) {
+    @Transactional
+    public String createTable(@RequestParam("tableName") String tableName, Model model, HttpSession session) {
+
+        if (!Pattern.matches("^[a-zA-Z0-9_]+$", tableName)) {
+            model.addAttribute("error", "表名不合法！仅允许使用字母、数字和下划线。");
+            model.addAttribute("showCreateModal", true);
+            return index(null, model, session);
+        }
+
         if (searchMapper.checkTableExists(tableName) > 0) {
             model.addAttribute("error", "表名 [" + tableName + "] 已存在，请重新输入！");
-            model.addAttribute("showCreateModal", true); // 用于前端自动弹出模态框
-            return index(model);
+            model.addAttribute("showCreateModal", true);
+            return index(null, model, session);
         }
 
         searchMapper.createTable(tableName);
@@ -72,51 +99,71 @@ public class TestController {
             ids.add((long) i);
         }
         searchMapper.insertInitialIds(tableName, ids);
-        this.currentTable = tableName;
+        session.setAttribute(TABLE_SESSION_KEY, tableName);
         return "redirect:/";
     }
 
     @PostMapping("/deleteTable")
-    public String deleteTable(@RequestParam("tableName") String tableName) {
+    public String deleteTable(@RequestParam("tableName") String tableName, HttpSession session) {
         searchMapper.dropTable(tableName);
-        if (currentTable.equals(tableName)) {
-            currentTable = "user";
+        String currentTableInSession = (String) session.getAttribute(TABLE_SESSION_KEY);
+        if (tableName.equals(currentTableInSession)) {
+            session.removeAttribute(TABLE_SESSION_KEY);
         }
         return "redirect:/";
     }
 
     @PostMapping("/addUser")
-    public String addUser(@ModelAttribute User user, Model model) {
-        String error = validateUser(user);
-        if (error != null) {
-            model.addAttribute("error", error);
-            model.addAttribute("showAddDataModal", true); // 验证失败弹出框不关闭
-            return index(model);
+    public String addUser(@ModelAttribute User user, Model model, HttpSession session) {
+        String currentTable = (String) session.getAttribute(TABLE_SESSION_KEY);
+        if (currentTable == null) return "redirect:/";
+
+        try {
+            String error = validateUser(user);
+            if (error != null) {
+                model.addAttribute("error", error);
+                model.addAttribute("showAddDataModal", true);
+                return index(null, model, session);
+            }
+            mappers.update(currentTable, user);
+            return "redirect:/";
+        } catch (Exception e) {
+            model.addAttribute("error", "添加失败：" + e.getMessage());
+            return index(null, model, session);
         }
-        // 因为 ID 1-60 已经存在，所以“添加数据”实际上是更新对应 ID 的行
-        updatedMapper.update(currentTable, user);
-        return "redirect:/";
     }
 
     @PostMapping("/updateUser")
-    public String updateUser(@ModelAttribute User user, Model model) {
-        String error = validateUser(user);
-        if (error != null) {
-            model.addAttribute("error", error);
-            return index(model);
+    public String updateUser(@ModelAttribute User user, Model model, HttpSession session) {
+        String currentTable = (String) session.getAttribute(TABLE_SESSION_KEY);
+        if (currentTable == null) return "redirect:/";
+
+        try {
+            String error = validateUser(user);
+            if (error != null) {
+                model.addAttribute("error", error);
+                model.addAttribute("showEditDataModal", true);
+                model.addAttribute("failedUser", user);
+                return index(null, model, session);
+            }
+            mappers.update(currentTable, user);
+            return "redirect:/";
+        } catch (Exception e) {
+            model.addAttribute("error", "更新失败：" + e.getMessage());
+            return index(null, model, session);
         }
-        updatedMapper.update(currentTable, user);
-        return "redirect:/";
     }
 
     @PostMapping("/deleteUser")
-    public String deleteUser(@RequestParam("id") Long id) {
-        // 删除数据将 ID 对应的 name 和 age 置空，而不是物理删除行（保持 1-60 ID）
+    public String deleteUser(@RequestParam("id") Long id, HttpSession session) {
+        String currentTable = (String) session.getAttribute(TABLE_SESSION_KEY);
+        if (currentTable == null) return "redirect:/";
+
         User emptyUser = new User();
         emptyUser.setId(id);
         emptyUser.setName(null);
         emptyUser.setAge(null);
-        updatedMapper.update(currentTable, emptyUser);
+        mappers.update(currentTable, emptyUser);
         return "redirect:/";
     }
 
@@ -125,12 +172,12 @@ public class TestController {
         if (user.getId() == null || user.getId() < 1 || user.getId() > 60) {
             return "ID 必须在 1-60 之间！";
         }
-        // 年龄校验 (1-30)
-        if (user.getAge() == null || user.getAge() < 1 || user.getAge() > 30) {
+        // 年龄校验 (如果填写了则校验范围 1-30)
+        if (user.getAge() != null && (user.getAge() < 1 || user.getAge() > 30)) {
             return "年龄必须在 1-30 之间！";
         }
         // 姓名非法字符检测 (！！@#￥%……&*——+)
-        if (user.getName() != null) {
+        if (user.getName() != null && !user.getName().isEmpty()) {
             String illegalChars = "！！@#￥%……&*——+";
             for (char c : illegalChars.toCharArray()) {
                 if (user.getName().indexOf(c) != -1) {

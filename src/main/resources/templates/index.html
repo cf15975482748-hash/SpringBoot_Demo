@@ -12,7 +12,10 @@
         .card { border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 25px; min-height: 120px; }
         .btn-custom { border-radius: 8px; transition: all 0.3s; }
         .btn-custom:hover { transform: translateY(-2px); }
-        .table-hover tbody tr:hover { background-color: rgba(13, 110, 253, 0.05); }
+        .table-hover tbody tr:hover { background-color: rgba(0, 0, 0, 0.08) !important; cursor: pointer; }
+        .edit-btn { opacity: 0; transition: opacity 0.2s; }
+        tr:hover .edit-btn { opacity: 1; }
+        
         .modal-header { background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; }
         
         /* 统一选择和删除表格的布局 */
@@ -54,6 +57,26 @@
             <button type="button" class="btn btn-primary btn-custom" data-bs-toggle="modal" data-bs-target="#addDataModal" th:if="${not #lists.isEmpty(tables)}">添加数据</button>
             <button type="button" class="btn btn-success btn-custom" data-bs-toggle="modal" data-bs-target="#createTableModal">新建表格</button>
             <a href="/" class="btn btn-outline-primary btn-custom">刷新数据</a>
+        </div>
+    </div>
+    
+    <!-- 模糊查询名字部分 -->
+    <div class="row" th:if="${not #lists.isEmpty(tables)}">
+        <div class="col-12">
+            <div class="card p-3 mb-4 shadow-sm" style="background-color: #ffffff; border-radius: 12px;">
+                <h5 class="card-title fw-bold mb-3"><i class="bi bi-search me-2 text-primary"></i>查询名字</h5>
+                <form th:action="@{/search}" method="post" class="d-flex gap-2">
+                    <input type="text" name="searchName" class="form-control" placeholder="输入要查询的名字关键词..." 
+                           th:value="${searchName}" style="height: 45px; border-radius: 8px;">
+                    <button type="submit" class="btn btn-primary px-4" style="height: 45px; border-radius: 8px; white-space: nowrap;">
+                        <i class="bi bi-search me-1"></i> 搜索
+                    </button>
+                    <a th:href="@{/}" class="btn btn-outline-secondary d-flex align-items-center justify-content-center" 
+                       style="height: 45px; border-radius: 8px; width: 45px;" title="重置搜索">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -105,10 +128,13 @@
                     <td th:text="${user.name}">张三</td>
                     <td th:text="${user.age}">20</td>
                     <td class="text-center">
-                        <!-- 修改为触发模态框 -->
-                        <button type="button" class="btn btn-sm btn-outline-danger btn-custom" 
-                                data-bs-toggle="modal" data-bs-target="#clearRowConfirmModal"
-                                th:onclick="|prepareClearRow(${user.id})|">清空</button>
+                        <!-- 核心修复：改用 data- 属性传递数据，避免 inline JS 渲染和转义问题 -->
+                        <button type="button" class="btn btn-sm btn-primary btn-custom edit-btn" 
+                                data-bs-toggle="modal" data-bs-target="#editDataModal"
+                                th:data-id="${user.id}"
+                                th:data-name="${user.name}"
+                                th:data-age="${user.age}"
+                                onclick="handleEditClick(this)">修改</button>
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(users)}">
@@ -166,11 +192,11 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">姓名</label>
-                        <input type="text" name="name" class="form-control" placeholder="请输入姓名 (禁止使用 ！！@#￥%……&*——+)" required>
+                        <input type="text" name="name" class="form-control" placeholder="请输入姓名 (禁止使用 ！！@#￥%……&*——+)">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">年龄 (1-30)</label>
-                        <input type="number" name="age" class="form-control" placeholder="请输入年龄" min="1" max="30" required>
+                        <input type="number" name="age" class="form-control" placeholder="请输入年龄" min="1" max="30">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -203,24 +229,34 @@
     </div>
 </div>
 
-<!-- 清空行确认弹出框 (Modal) -->
-<div class="modal fade" id="clearRowConfirmModal" tabindex="-1" aria-labelledby="clearRowConfirmModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
+<!-- 修改数据弹出框 (Modal) -->
+<div class="modal fade" id="editDataModal" tabindex="-1" aria-labelledby="editDataModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold" id="clearRowConfirmModalLabel">确认清空</h5>
+                <h5 class="modal-title fw-bold" id="editDataModalLabel">修改数据</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                确定要清空 ID 为 <span id="targetRowIdDisplay" class="fw-bold"></span> 的行数据吗？
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <form th:action="@{/deleteUser}" method="post" id="clearRowForm">
-                    <input type="hidden" name="id" id="targetRowIdInput">
-                    <button type="submit" class="btn btn-danger">确认</button>
-                </form>
-            </div>
+            <form th:action="@{/updateUser}" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">ID (不可修改)</label>
+                        <input type="number" name="id" id="editId" class="form-control bg-light" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">姓名</label>
+                        <input type="text" name="name" id="editName" class="form-control" placeholder="请输入姓名">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">年龄 (1-30)</label>
+                        <input type="number" name="age" id="editAge" class="form-control" placeholder="请输入年龄" min="1" max="30">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">确认修改</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -242,6 +278,8 @@
     // 自动打开模态框逻辑
     const showCreateModal = /*[[${showCreateModal}]]*/ false;
     const showAddDataModal = /*[[${showAddDataModal}]]*/ false;
+    const showEditDataModal = /*[[${showEditDataModal}]]*/ false;
+    const failedUser = /*[[${failedUser}]]*/ null;
     
     document.addEventListener('DOMContentLoaded', function() {
         if (showCreateModal) {
@@ -250,6 +288,11 @@
         }
         if (showAddDataModal) {
             const modal = new bootstrap.Modal(document.getElementById('addDataModal'));
+            modal.show();
+        }
+        if (showEditDataModal && failedUser) {
+            prepareEditRow(failedUser.id, failedUser.name, failedUser.age);
+            const modal = new bootstrap.Modal(document.getElementById('editDataModal'));
             modal.show();
         }
     });
@@ -266,10 +309,19 @@
         document.getElementById('deleteTableForm').submit();
     }
 
-    // 准备清空行
-    function prepareClearRow(id) {
-        document.getElementById('targetRowIdDisplay').innerText = id;
-        document.getElementById('targetRowIdInput').value = id;
+    // 处理修改按钮点击
+    function handleEditClick(btn) {
+        const id = btn.getAttribute('data-id');
+        const name = btn.getAttribute('data-name');
+        const age = btn.getAttribute('data-age');
+        prepareEditRow(id, name, age);
+    }
+
+    // 准备修改行数据
+    function prepareEditRow(id, name, age) {
+        document.getElementById('editId').value = id;
+        document.getElementById('editName').value = (name === 'null' || name === null || name === undefined || name === '') ? '' : name;
+        document.getElementById('editAge').value = (age === 'null' || age === null || age === undefined || age === '') ? '' : age;
     }
 </script>
 </body>
