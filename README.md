@@ -55,20 +55,20 @@ src/main/resources/
 
 ## 4. 关键代码解析 (面向初学者)
 
-### 4.1 控制器层：[TestController.java](file:///c:/JavaProjects/SpringBoot_Test/src/main/java/com/SpringBoot_Test/Controller/TestController.java)
+### 4.1 控制器层：[TestController.java](src/main/java/com/SpringBoot_Test/Controller/TestController.java)
 它是整个系统的“大脑”。
 - **统一数据更新**：`handleDataUpdate` 方法是一个很好的重构范例。它集成了权限校验、ID 存在性检查、数据校验，并根据操作类型（新增/修改/删除）调用不同的 Mapper 方法，避免了代码冗余。
 - **数据适配映射**：`mapToUser` 方法将不同的账号实体（Admin/Teacher/Student）统一转换为 `User` 视图实体，确保前端 `index.html` 能够用同一套逻辑渲染不同的表。
 
-### 4.2 持久层：[SearchMapper.java](file:///c:/JavaProjects/SpringBoot_Test/src/main/java/com/SpringBoot_Test/Mapper/SearchMapper.java)
+### 4.2 持久层：[SearchMapper.java](src/main/java/com/SpringBoot_Test/Mapper/SearchMapper.java)
 展示了 MyBatis 注解的高级用法。
 - **动态 SQL**：使用 `${tableName}` 实现动态表名切换。注意：这里使用了反引号 `` `${tableName}` `` 来保护表名，防止与数据库关键字冲突。
 - **脚本插入**：`insertInitialIds` 使用了 `<script>` 和 `<foreach>` 标签，演示了如何在注解中编写复杂的动态批量插入逻辑。
 
-### 4.3 拦截器：[LoginInterceptor.java](file:///c:/JavaProjects/SpringBoot_Test/src/main/java/com/SpringBoot_Test/Interceptor/LoginInterceptor.java)
+### 4.3 拦截器：[LoginInterceptor.java](src/main/java/com/SpringBoot_Test/Interceptor/LoginInterceptor.java)
 - **安全第一**：在请求到达 Controller 之前拦截，校验 Session 中是否存在登录用户信息。未登录者会被强制重定向至 `/login`。
 
-### 4.4 前端交互：[index.html](file:///c:/JavaProjects/SpringBoot_Test/src/main/resources/templates/index.html)
+### 4.4 前端交互：[index.html](src/main/resources/templates/index.html)
 - **Thymeleaf 逻辑判断**：利用 `th:if` 和 `th:text` 根据当前登录的角色动态隐藏或显示按钮。
 - **Modal 交互**：通过 `data-bs-*` 属性和简单的 JavaScript，实现了不跳转页面即可弹出表单进行数据录入的流畅体验。
 
