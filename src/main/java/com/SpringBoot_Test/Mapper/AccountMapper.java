@@ -16,6 +16,9 @@ public interface AccountMapper {
     @Select("SELECT * FROM admin")
     List<Admin> findAllAdmins();
 
+    @Select("SELECT * FROM admin WHERE username LIKE CONCAT('%', #{name}, '%') OR real_name LIKE CONCAT('%', #{name}, '%')")
+    List<Admin> searchAdmins(@Param("name") String name);
+
     @Insert("INSERT INTO admin(username, password, real_name) VALUES(#{username}, #{password}, #{realName})")
     void addAdmin(Admin admin);
 
@@ -32,6 +35,9 @@ public interface AccountMapper {
     @Select("SELECT * FROM teacher")
     List<Teacher> findAllTeachers();
 
+    @Select("SELECT * FROM teacher WHERE username LIKE CONCAT('%', #{name}, '%') OR real_name LIKE CONCAT('%', #{name}, '%')")
+    List<Teacher> searchTeachers(@Param("name") String name);
+
     @Insert("INSERT INTO teacher(username, password, real_name) VALUES(#{username}, #{password}, #{realName})")
     void addTeacher(Teacher teacher);
 
@@ -47,6 +53,9 @@ public interface AccountMapper {
 
     @Select("SELECT * FROM student")
     List<Student> findAllStudents();
+
+    @Select("SELECT * FROM student WHERE username LIKE CONCAT('%', #{name}, '%') OR real_name LIKE CONCAT('%', #{name}, '%')")
+    List<Student> searchStudents(@Param("name") String name);
 
     @Insert("INSERT INTO student(username, password, real_name) VALUES(#{username}, #{password}, #{realName})")
     void addStudent(Student student);

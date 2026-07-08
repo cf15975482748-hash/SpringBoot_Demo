@@ -20,6 +20,10 @@ public interface SearchMapper {
     @Select("SELECT * FROM `${tableName}`")
     List<User> findAll(@Param("tableName") String tableName);
 
+    // 检查 ID 是否存在
+    @Select("SELECT COUNT(*) FROM `${tableName}` WHERE id = #{id}")
+    int countById(@Param("tableName") String tableName, @Param("id") Long id);
+
     // 创建新表 (新增创建人和白名单字段)
     @Update("CREATE TABLE IF NOT EXISTS `${tableName}` (" +
             "id INT PRIMARY KEY AUTO_INCREMENT, " +

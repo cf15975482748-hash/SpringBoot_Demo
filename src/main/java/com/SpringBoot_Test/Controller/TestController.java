@@ -2,7 +2,11 @@ package com.SpringBoot_Test.Controller;
 
 
 import com.SpringBoot_Test.Mapper.TableAuthMapper;
+import com.SpringBoot_Test.Mapper.AccountMapper;
 import com.SpringBoot_Test.Model.User;
+import com.SpringBoot_Test.Model.Admin;
+import com.SpringBoot_Test.Model.Teacher;
+import com.SpringBoot_Test.Model.Student;
 import com.SpringBoot_Test.Mapper.SearchMapper;
 import com.SpringBoot_Test.Mapper.Mappers;
 import com.SpringBoot_Test.Util.AuthUtil;
@@ -12,6 +16,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -31,15 +36,33 @@ public class TestController {
     @Autowired
     private TableAuthMapper tableAuthMapper;
 
+    @Autowired
+    private AccountMapper accountMapper;
+
     private static final String TABLE_SESSION_KEY = "CURRENT_TABLE";
 
     @GetMapping("/")
     public String index(@RequestParam(value = "searchName", required = false) String searchName, Model model, HttpSession session) {
         List<String> visibleTables = new ArrayList<>();
         String role = (String) session.getAttribute(AuthUtil.SESSION_ROLE);
+        String username = (String) session.getAttribute("username");
         
         for (String tableName : searchMapper.getAllTables()) {
-            if ("admin".equals(role) || isBusinessTable(tableName)) visibleTables.add(tableName);
+            if ("admin".equals(role)) {
+                visibleTables.add(tableName);
+            } else if ("teacher".equals(role)) {
+                if (isBusinessTable(tableName)) visibleTables.add(tableName);
+            } else if ("student".equals(role)) {
+                if (isBusinessTable(tableName)) {
+                    try {
+                        Map<String, Object> auth = tableAuthMapper.getTableAuthInfo(tableName);
+                        String whitelist = (String) auth.get("allowStudent");
+                        if (whitelist != null && Arrays.asList(whitelist.split(",")).contains(username)) {
+                            visibleTables.add(tableName);
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
         }
         
         model.addAttribute("tables", visibleTables);
@@ -56,18 +79,38 @@ public class TestController {
             session.setAttribute(TABLE_SESSION_KEY, currentTable);
         }
 
-        List<User> users = (searchName != null && !searchName.trim().isEmpty()) ?
-                mappers.searchByName(currentTable, searchName.trim()) :
-                searchMapper.findAll(currentTable);
-        
-        if (isBusinessTable(currentTable)) {
+        // 数据加载逻辑适配
+        List<User> displayUsers = new ArrayList<>();
+        boolean hasSearch = searchName != null && !searchName.trim().isEmpty();
+        String searchKey = hasSearch ? searchName.trim() : null;
+
+        if (!isBusinessTable(currentTable)) {
+            // 系统表数据适配 + 搜索支持
+            if ("admin".equals(currentTable)) {
+                List<Admin> admins = hasSearch ? accountMapper.searchAdmins(searchKey) : accountMapper.findAllAdmins();
+                admins.forEach(a -> displayUsers.add(mapToUser(a.getId(), a.getRealName())));
+            } else if ("teacher".equals(currentTable)) {
+                List<Teacher> teachers = hasSearch ? accountMapper.searchTeachers(searchKey) : accountMapper.findAllTeachers();
+                teachers.forEach(t -> displayUsers.add(mapToUser(t.getId(), t.getRealName())));
+            } else if ("student".equals(currentTable)) {
+                List<Student> students = hasSearch ? accountMapper.searchStudents(searchKey) : accountMapper.findAllStudents();
+                students.forEach(s -> displayUsers.add(mapToUser(s.getId(), s.getRealName())));
+            }
+        } else {
+            // 业务表逻辑
+            List<User> finalDisplayUsers = hasSearch ? mappers.searchByName(currentTable, searchKey) : searchMapper.findAll(currentTable);
+            displayUsers.addAll(finalDisplayUsers);
             try { model.addAttribute("tableAuthInfo", tableAuthMapper.getTableAuthInfo(currentTable)); } catch (Exception ignored) {}
         }
         
-        model.addAttribute("users", users);
+        if (hasSearch) model.addAttribute("searchName", searchName);
+        model.addAttribute("users", displayUsers);
         model.addAttribute("currentTable", currentTable);
-        if (searchName != null) model.addAttribute("searchName", searchName);
         return "index";
+    }
+
+    private User mapToUser(Long id, String name) {
+        User u = new User(); u.setId(id); u.setName(name); return u;
     }
 
     private boolean isBusinessTable(String tableName) {
@@ -158,15 +201,28 @@ public class TestController {
 
     private String handleDataUpdate(User user, String modalFlag, Model model, HttpSession session) {
         if (AuthUtil.isStudent(session)) {
-            model.addAttribute("error", "权限不足！");
+            model.addAttribute("error", "权限不足！学生仅拥有只读权限。");
             return index(null, model, session);
         }
         String table = (String) session.getAttribute(TABLE_SESSION_KEY);
-        if (table == null || !hasWriteAuth(table, session)) {
-            model.addAttribute("error", "无权操作该表！");
+        if (table == null || !isBusinessTable(table) || !hasWriteAuth(table, session)) {
+            model.addAttribute("error", "非法操作：系统账号表禁止在此处修改，或您无权操作该表！");
             return index(null, model, session);
         }
+
+        // BUG2 修复：增加 ID 非空与存在性校验
+        if (user.getId() == null) {
+            model.addAttribute("error", "操作失败：ID 不能为空！");
+            return index(null, model, session);
+        }
+
         try {
+            // 校验 ID 存在性
+            if (searchMapper.countById(table, user.getId()) == 0) {
+                model.addAttribute("error", "操作失败：该 ID [" + user.getId() + "] 数据不存在，无需删除或修改。");
+                return index(null, model, session);
+            }
+
             String error = validateUser(user);
             if (error != null) {
                 model.addAttribute("error", error);
@@ -174,10 +230,16 @@ public class TestController {
                 if ("showEditDataModal".equals(modalFlag)) model.addAttribute("failedUser", user);
                 return index(null, model, session);
             }
-            mappers.update(table, user);
+
+            // 如果是删除操作 (modalFlag 为 null 且 User 字段为空)
+            if (modalFlag == null && user.getName() == null && user.getAge() == null) {
+                mappers.delete(table, user.getId()); // 执行物理删除或按原逻辑置空
+            } else {
+                mappers.update(table, user);
+            }
             return "redirect:/";
         } catch (Exception e) {
-            model.addAttribute("error", "操作失败：" + e.getMessage());
+            model.addAttribute("error", "数据库操作失败：" + e.getMessage());
             return index(null, model, session);
         }
     }
