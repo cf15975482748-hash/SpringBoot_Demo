@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.servlet.http.HttpSession;
-import java.util.List;
 
 @Controller
 public class AccountController {
@@ -32,32 +31,25 @@ public class AccountController {
     }
 
     @PostMapping("/doLogin")
-    public String doLogin(@RequestParam String username,
-                          @RequestParam String password,
-                          @RequestParam String role,
-                          HttpSession session,
-                          RedirectAttributes redirectAttributes) {
-        Object user = null;
-        if ("admin".equals(role)) {
-            Admin admin = accountMapper.findAdminByUsername(username);
-            if (admin != null && admin.getPassword().equals(password)) user = admin;
-        } else if ("teacher".equals(role)) {
-            Teacher teacher = accountMapper.findTeacherByUsername(username);
-            if (teacher != null && teacher.getPassword().equals(password)) user = teacher;
-        } else if ("student".equals(role)) {
-            Student student = accountMapper.findStudentByUsername(username);
-            if (student != null && student.getPassword().equals(password)) user = student;
-        }
+    public String doLogin(@RequestParam String username, @RequestParam String password, @RequestParam String role,
+                          HttpSession session, RedirectAttributes ra) {
+        Object user = "admin".equals(role) ? accountMapper.findAdminByUsername(username) :
+                     "teacher".equals(role) ? accountMapper.findTeacherByUsername(username) :
+                     accountMapper.findStudentByUsername(username);
 
-        if (user != null) {
+        boolean success = false;
+        if (user instanceof Admin && ((Admin) user).getPassword().equals(password)) success = true;
+        else if (user instanceof Teacher && ((Teacher) user).getPassword().equals(password)) success = true;
+        else if (user instanceof Student && ((Student) user).getPassword().equals(password)) success = true;
+
+        if (success) {
             session.setAttribute(AuthUtil.SESSION_USER, user);
             session.setAttribute(AuthUtil.SESSION_ROLE, role);
             session.setAttribute("username", username);
             return "redirect:/";
-        } else {
-            redirectAttributes.addFlashAttribute("error", "账号或密码错误");
-            return "redirect:/login";
         }
+        ra.addFlashAttribute("error", "账号或密码错误");
+        return "redirect:/login";
     }
 
     @GetMapping("/logout")
@@ -71,7 +63,6 @@ public class AccountController {
     @GetMapping("/account-manage")
     public String accountManage(Model model, HttpSession session) {
         if (!AuthUtil.isAdmin(session)) return "redirect:/";
-        
         model.addAttribute("admins", accountMapper.findAllAdmins());
         model.addAttribute("teachers", accountMapper.findAllTeachers());
         model.addAttribute("students", accountMapper.findAllStudents());
@@ -79,10 +70,8 @@ public class AccountController {
     }
 
     @PostMapping("/admin/addAccount")
-    public String addAccount(@RequestParam String role, 
-                             @RequestParam String username, 
-                             @RequestParam String password, 
-                             @RequestParam String realName,
+    public String addAccount(@RequestParam String role, @RequestParam String username, 
+                             @RequestParam String password, @RequestParam String realName,
                              HttpSession session, RedirectAttributes ra) {
         if (!AuthUtil.isAdmin(session)) return "redirect:/";
         try {
@@ -92,7 +81,7 @@ public class AccountController {
             } else if ("teacher".equals(role)) {
                 Teacher t = new Teacher(); t.setUsername(username); t.setPassword(password); t.setRealName(realName);
                 accountMapper.addTeacher(t);
-            } else if ("student".equals(role)) {
+            } else {
                 Student s = new Student(); s.setUsername(username); s.setPassword(password); s.setRealName(realName);
                 accountMapper.addStudent(s);
             }
@@ -107,7 +96,7 @@ public class AccountController {
         if (!AuthUtil.isAdmin(session)) return "redirect:/";
         if ("admin".equals(role)) accountMapper.deleteAdmin(username);
         else if ("teacher".equals(role)) accountMapper.deleteTeacher(username);
-        else if ("student".equals(role)) accountMapper.deleteStudent(username);
+        else accountMapper.deleteStudent(username);
         return "redirect:/account-manage";
     }
 

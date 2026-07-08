@@ -19,10 +19,11 @@ public class AuthUtil {
         return "student".equals(session.getAttribute(SESSION_ROLE));
     }
 
+    public static boolean isLoggedIn(HttpSession session) {
+        return session.getAttribute(SESSION_USER) != null;
+    }
+
     public static String getCurrentUsername(HttpSession session) {
-        Object user = session.getAttribute(SESSION_USER);
-        if (user == null) return null;
-        // 假设 SessionUser 或者是具体实体类，这里简单获取用户名
         return (String) session.getAttribute("username");
     }
 }
