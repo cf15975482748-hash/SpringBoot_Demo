@@ -29,8 +29,7 @@ public interface SearchMapper {
             "id INT PRIMARY KEY AUTO_INCREMENT, " +
             "name VARCHAR(255), " +
             "score FLOAT DEFAULT 0.0, " +
-            "create_user VARCHAR(100), " +
-            "allow_student TEXT)")
+            "create_user VARCHAR(100))")
     void createTable(@Param("tableName") String tableName);
 
     // 删除表 (逻辑在 Controller 或此处增强)

@@ -6,6 +6,7 @@ public class User {
     private Long id;
     private String name;
     private Float score;
+    private String password;
 
     // getter
     public Long getId() {
@@ -20,6 +21,10 @@ public class User {
         return score;
     }
 
+    public String getPassword() {
+        return password;
+    }
+
     // setter
     public void setId(Long id) {
         this.id = id;
@@ -31,5 +36,9 @@ public class User {
 
     public void setScore(Float score) {
         this.score = score;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }

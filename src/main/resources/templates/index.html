@@ -53,7 +53,7 @@
         <div class="ms-auto d-flex align-items-center">
             <span class="navbar-text me-3" th:text="${session.loginUser.realName} + ' (' + ${session.loginRole} + ')'">用户 (角色)</span>
             <a th:if="${session.loginRole == 'admin'}" href="/account-manage" class="btn btn-outline-info btn-sm me-2">账号管理</a>
-            <button th:if="${session.loginRole == 'student'}" class="btn btn-outline-warning btn-sm me-2" data-bs-toggle="modal" data-bs-target="#changePwdModal">修改密码</button>
+            <button th:if="${session.loginRole == 'student' || session.loginRole == 'teacher'}" class="btn btn-outline-warning btn-sm me-2" data-bs-toggle="modal" data-bs-target="#changePwdModal">修改密码</button>
             <a href="/logout" class="btn btn-outline-light btn-sm">退出登录</a>
         </div>
     </nav>
@@ -63,11 +63,6 @@
             <h2 class="text-primary fw-bold">数据库管理系统</h2>
             <p class="text-muted mb-0">
                 当前表：<span class="badge bg-info text-dark" th:text="${currentTable}">user</span>
-                <span th:if="${tableAuthInfo != null}" class="ms-2 small">
-                    <span th:if="${session.loginRole == 'admin' || (session.loginRole == 'teacher' && session.username == tableAuthInfo['createUser'])}">
-                        白名单：<span class="text-success" th:text="${tableAuthInfo['allowStudent'] ?: '无'}"></span>
-                    </span>
-                </span>
             </p>
         </div>
         <div class="text-end d-flex gap-2">
@@ -109,8 +104,6 @@
                                 th:text="${table}" 
                                 th:selected="${table == currentTable}"></option>
                     </select>
-                    <button th:if="${session.loginRole == 'teacher' && tableAuthInfo != null && session.username == tableAuthInfo['createUser']}" 
-                            type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#whitelistModal">白名单</button>
                 </form>
             </div>
         </div>
@@ -136,7 +129,7 @@
                 <tr>
                     <th>ID</th>
                     <th>姓名</th>
-                    <th>成绩</th>
+                    <th th:text="${currentTable == 'admin' || currentTable == 'teacher' || currentTable == 'student' ? '密码' : '成绩'}">成绩</th>
                     <th class="text-center">操作</th>
                 </tr>
             </thead>
@@ -144,7 +137,7 @@
                 <tr th:each="user : ${users}">
                     <td th:text="${user.id}">1</td>
                     <td th:text="${user.name}">张三</td>
-                    <td th:text="${user.score}">80</td>
+                    <td th:text="${currentTable == 'admin' || currentTable == 'teacher' || currentTable == 'student' ? user.password : user.score}">80</td>
                     <td class="text-center">
                         <button th:if="${session.loginRole != 'student' && currentTable != 'admin' && currentTable != 'teacher' && currentTable != 'student'}" 
                                 type="button" class="btn btn-sm btn-primary btn-custom edit-btn" 
@@ -163,12 +156,12 @@
     </div>
 </div>
 
-<!-- 修改密码 Modal (Student) -->
+<!-- 修改密码 Modal -->
 <div class="modal fade" id="changePwdModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header"><h5>修改登录密码</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <form th:action="@{/student/updatePassword}" method="post">
+            <form th:action="${session.loginRole == 'teacher' ? '/teacher/updatePassword' : '/student/updatePassword'}" method="post">
                 <div class="modal-body">
                     <div class="mb-3"><label class="form-label">新密码</label><input type="password" name="newPassword" class="form-control" required></div>
                 </div>

@@ -35,13 +35,20 @@
         <div class="card-header bg-secondary text-white">管理员列表</div>
         <div class="card-body p-0">
             <table class="table table-hover mb-0">
-                <thead><tr><th>ID</th><th>用户名</th><th>真实姓名</th><th>操作</th></tr></thead>
+                <thead><tr><th>ID</th><th>用户名</th><th>密码</th><th>真实姓名</th><th>操作</th></tr></thead>
                 <tbody>
                     <tr th:each="a : ${admins}">
                         <td th:text="${a.id}"></td>
                         <td th:text="${a.username}"></td>
+                        <td th:text="${a.password}"></td>
                         <td th:text="${a.realName}"></td>
                         <td>
+                            <button type="button" class="btn btn-primary btn-sm" 
+                                    th:data-role="admin"
+                                    th:data-username="${a.username}"
+                                    th:data-password="${a.password}"
+                                    th:data-realname="${a.realName}"
+                                    onclick="editAccount(this)">修改</button>
                             <form th:action="@{/admin/deleteAccount}" method="post" style="display:inline;">
                                 <input type="hidden" name="role" value="admin">
                                 <input type="hidden" name="username" th:value="${a.username}">
@@ -59,13 +66,20 @@
         <div class="card-header bg-success text-white">老师列表</div>
         <div class="card-body p-0">
             <table class="table table-hover mb-0">
-                <thead><tr><th>ID</th><th>用户名</th><th>真实姓名</th><th>操作</th></tr></thead>
+                <thead><tr><th>ID</th><th>用户名</th><th>密码</th><th>真实姓名</th><th>操作</th></tr></thead>
                 <tbody>
                     <tr th:each="t : ${teachers}">
                         <td th:text="${t.id}"></td>
                         <td th:text="${t.username}"></td>
+                        <td th:text="${t.password}"></td>
                         <td th:text="${t.realName}"></td>
                         <td>
+                            <button type="button" class="btn btn-primary btn-sm" 
+                                    th:data-role="teacher"
+                                    th:data-username="${t.username}"
+                                    th:data-password="${t.password}"
+                                    th:data-realname="${t.realName}"
+                                    onclick="editAccount(this)">修改</button>
                             <form th:action="@{/admin/deleteAccount}" method="post" style="display:inline;">
                                 <input type="hidden" name="role" value="teacher">
                                 <input type="hidden" name="username" th:value="${t.username}">
@@ -83,13 +97,20 @@
         <div class="card-header bg-info text-white">学生列表</div>
         <div class="card-body p-0">
             <table class="table table-hover mb-0">
-                <thead><tr><th>ID</th><th>用户名</th><th>真实姓名</th><th>操作</th></tr></thead>
+                <thead><tr><th>ID</th><th>用户名</th><th>密码</th><th>真实姓名</th><th>操作</th></tr></thead>
                 <tbody>
                     <tr th:each="s : ${students}">
                         <td th:text="${s.id}"></td>
                         <td th:text="${s.username}"></td>
+                        <td th:text="${s.password}"></td>
                         <td th:text="${s.realName}"></td>
                         <td>
+                            <button type="button" class="btn btn-primary btn-sm" 
+                                    th:data-role="student"
+                                    th:data-username="${s.username}"
+                                    th:data-password="${s.password}"
+                                    th:data-realname="${s.realName}"
+                                    onclick="editAccount(this)">修改</button>
                             <form th:action="@{/admin/deleteAccount}" method="post" style="display:inline;">
                                 <input type="hidden" name="role" value="student">
                                 <input type="hidden" name="username" th:value="${s.username}">
@@ -99,6 +120,27 @@
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- 修改账号 Modal -->
+<div class="modal fade" id="editAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5>修改账号</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form th:action="@{/admin/updateAccount}" method="post">
+                <input type="hidden" name="role" id="editRole">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">用户名 (不可修改)</label>
+                        <input type="text" name="username" id="editUsername" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3"><label class="form-label">密码</label><input type="text" name="password" id="editPassword" class="form-control" required></div>
+                    <div class="mb-3"><label class="form-label">真实姓名</label><input type="text" name="realName" id="editRealName" class="form-control" required></div>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">确认修改</button></div>
+            </form>
         </div>
     </div>
 </div>
@@ -140,6 +182,14 @@
         var toastEl = document.getElementById('errorToast');
         if (toastEl) { setTimeout(function () { new bootstrap.Toast(toastEl).hide(); }, 3000); }
     });
+
+    function editAccount(btn) {
+        document.getElementById('editRole').value = btn.getAttribute('data-role');
+        document.getElementById('editUsername').value = btn.getAttribute('data-username');
+        document.getElementById('editPassword').value = btn.getAttribute('data-password');
+        document.getElementById('editRealName').value = btn.getAttribute('data-realname');
+        new bootstrap.Modal(document.getElementById('editAccountModal')).show();
+    }
 </script>
 </body>
 </html>

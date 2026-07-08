@@ -50,17 +50,10 @@ public class TestController {
         for (String tableName : searchMapper.getAllTables()) {
             if ("admin".equals(role)) {
                 visibleTables.add(tableName);
-            } else if ("teacher".equals(role)) {
-                if (isBusinessTable(tableName)) visibleTables.add(tableName);
-            } else if ("student".equals(role)) {
+            } else if ("teacher".equals(role) || "student".equals(role)) {
+                // 移除白名单过滤逻辑，老师和学生都能看到所有业务表
                 if (isBusinessTable(tableName)) {
-                    try {
-                        Map<String, Object> auth = tableAuthMapper.getTableAuthInfo(tableName);
-                        String whitelist = (String) auth.get("allowStudent");
-                        if (whitelist != null && Arrays.asList(whitelist.split(",")).contains(username)) {
-                            visibleTables.add(tableName);
-                        }
-                    } catch (Exception ignored) {}
+                    visibleTables.add(tableName);
                 }
             }
         }
@@ -85,22 +78,21 @@ public class TestController {
         String searchKey = hasSearch ? searchName.trim() : null;
 
         if (!isBusinessTable(currentTable)) {
-            // 系统表数据适配 + 搜索支持
+            // 系统表数据适配 + 搜索支持 (显示真实姓名和密码)
             if ("admin".equals(currentTable)) {
                 List<Admin> admins = hasSearch ? accountMapper.searchAdmins(searchKey) : accountMapper.findAllAdmins();
-                admins.forEach(a -> displayUsers.add(mapToUser(a.getId(), a.getRealName())));
+                admins.forEach(a -> displayUsers.add(mapToUser(a.getId(), a.getRealName(), a.getPassword())));
             } else if ("teacher".equals(currentTable)) {
                 List<Teacher> teachers = hasSearch ? accountMapper.searchTeachers(searchKey) : accountMapper.findAllTeachers();
-                teachers.forEach(t -> displayUsers.add(mapToUser(t.getId(), t.getRealName())));
+                teachers.forEach(t -> displayUsers.add(mapToUser(t.getId(), t.getRealName(), t.getPassword())));
             } else if ("student".equals(currentTable)) {
                 List<Student> students = hasSearch ? accountMapper.searchStudents(searchKey) : accountMapper.findAllStudents();
-                students.forEach(s -> displayUsers.add(mapToUser(s.getId(), s.getRealName())));
+                students.forEach(s -> displayUsers.add(mapToUser(s.getId(), s.getRealName(), s.getPassword())));
             }
         } else {
             // 业务表逻辑
             List<User> finalDisplayUsers = hasSearch ? mappers.searchByName(currentTable, searchKey) : searchMapper.findAll(currentTable);
             displayUsers.addAll(finalDisplayUsers);
-            try { model.addAttribute("tableAuthInfo", tableAuthMapper.getTableAuthInfo(currentTable)); } catch (Exception ignored) {}
         }
         
         if (hasSearch) model.addAttribute("searchName", searchName);
@@ -109,8 +101,8 @@ public class TestController {
         return "index";
     }
 
-    private User mapToUser(Long id, String name) {
-        User u = new User(); u.setId(id); u.setName(name); u.setScore(0f); return u;
+    private User mapToUser(Long id, String name, String password) {
+        User u = new User(); u.setId(id); u.setName(name); u.setPassword(password); return u;
     }
 
     private boolean isBusinessTable(String tableName) {
@@ -139,7 +131,6 @@ public class TestController {
         } else {
             try {
                 if (searchMapper.checkTableExists(tableName) > 0) {
-                    ensureTableStructure(tableName);
                     model.addAttribute("error", "表已存在，结构已同步。");
                 } else {
                     searchMapper.createTable(tableName);
@@ -155,18 +146,6 @@ public class TestController {
             }
         }
         return index(null, model, session);
-    }
-
-    // 辅助方法：确保表结构包含权限字段
-    private void ensureTableStructure(String tableName) {
-        try {
-            if (searchMapper.checkColumnExists(tableName, "create_user") == 0) {
-                searchMapper.addColumnToTable(tableName, "create_user", "VARCHAR(100)");
-            }
-            if (searchMapper.checkColumnExists(tableName, "allow_student") == 0) {
-                searchMapper.addColumnToTable(tableName, "allow_student", "TEXT");
-            }
-        } catch (Exception ignored) {}
     }
 
     @PostMapping("/deleteTable")

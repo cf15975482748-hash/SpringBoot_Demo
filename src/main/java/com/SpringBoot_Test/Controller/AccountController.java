@@ -100,6 +100,28 @@ public class AccountController {
         return "redirect:/account-manage";
     }
 
+    @PostMapping("/admin/updateAccount")
+    public String updateAccount(@RequestParam String role, @RequestParam String username,
+                                @RequestParam String password, @RequestParam String realName,
+                                HttpSession session, RedirectAttributes ra) {
+        if (!AuthUtil.isAdmin(session)) return "redirect:/";
+        try {
+            if ("admin".equals(role)) {
+                Admin a = new Admin(); a.setUsername(username); a.setPassword(password); a.setRealName(realName);
+                accountMapper.updateAdmin(a);
+            } else if ("teacher".equals(role)) {
+                Teacher t = new Teacher(); t.setUsername(username); t.setPassword(password); t.setRealName(realName);
+                accountMapper.updateTeacher(t);
+            } else {
+                Student s = new Student(); s.setUsername(username); s.setPassword(password); s.setRealName(realName);
+                accountMapper.updateStudent(s);
+            }
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "修改失败");
+        }
+        return "redirect:/account-manage";
+    }
+
     // --- 权限配置 (Teacher 专属) ---
 
     @PostMapping("/teacher/updateWhitelist")
@@ -112,12 +134,23 @@ public class AccountController {
 
     // --- 密码修改 (Student 专属) ---
     @PostMapping("/student/updatePassword")
-    public String updatePassword(@RequestParam String newPassword, HttpSession session) {
+    public String studentUpdatePassword(@RequestParam String newPassword, HttpSession session) {
         if (!AuthUtil.isStudent(session)) return "redirect:/";
         String username = AuthUtil.getCurrentUsername(session);
         Student s = accountMapper.findStudentByUsername(username);
         s.setPassword(newPassword);
         accountMapper.updateStudent(s);
+        return "redirect:/logout";
+    }
+
+    // --- 密码修改 (Teacher 专属) ---
+    @PostMapping("/teacher/updatePassword")
+    public String teacherUpdatePassword(@RequestParam String newPassword, HttpSession session) {
+        if (!AuthUtil.isTeacher(session)) return "redirect:/";
+        String username = AuthUtil.getCurrentUsername(session);
+        Teacher t = accountMapper.findTeacherByUsername(username);
+        t.setPassword(newPassword);
+        accountMapper.updateTeacher(t);
         return "redirect:/logout";
     }
 }
