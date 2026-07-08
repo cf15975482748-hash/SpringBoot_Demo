@@ -110,7 +110,7 @@ public class TestController {
     }
 
     private User mapToUser(Long id, String name) {
-        User u = new User(); u.setId(id); u.setName(name); return u;
+        User u = new User(); u.setId(id); u.setName(name); u.setScore(0f); return u;
     }
 
     private boolean isBusinessTable(String tableName) {
@@ -232,7 +232,7 @@ public class TestController {
             }
 
             // 如果是删除操作 (modalFlag 为 null 且 User 字段为空)
-            if (modalFlag == null && user.getName() == null && user.getAge() == null) {
+            if (modalFlag == null && user.getName() == null && user.getScore() == null) {
                 mappers.delete(table, user.getId()); // 执行物理删除或按原逻辑置空
             } else {
                 mappers.update(table, user);
@@ -258,9 +258,9 @@ public class TestController {
         if (user.getId() == null || user.getId() < 1 || user.getId() > 60) {
             return "ID 必须在 1-60 之间！";
         }
-        // 年龄校验 (如果填写了则校验范围 1-30)
-        if (user.getAge() != null && (user.getAge() < 1 || user.getAge() > 30)) {
-            return "年龄必须在 1-30 之间！";
+        // 成绩范围校验 (如果填写了则校验范围 0-100)
+        if (user.getScore() != null && (user.getScore() < 0 || user.getScore() > 100)) {
+            return "成绩必须在 0-100 之间！";
         }
         // 姓名非法字符检测 (！！@#￥%……&*——+)
         if (user.getName() != null && !user.getName().isEmpty()) {

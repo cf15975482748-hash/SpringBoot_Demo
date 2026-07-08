@@ -5,7 +5,7 @@ public class User {
     // 只有字段 + get + set
     private Long id;
     private String name;
-    private Integer age;
+    private Float score;
 
     // getter
     public Long getId() {
@@ -16,8 +16,8 @@ public class User {
         return name;
     }
 
-    public Integer getAge() {
-        return age;
+    public Float getScore() {
+        return score;
     }
 
     // setter
@@ -29,7 +29,7 @@ public class User {
         this.name = name;
     }
 
-    public void setAge(Integer age) {
-        this.age = age;
+    public void setScore(Float score) {
+        this.score = score;
     }
 }

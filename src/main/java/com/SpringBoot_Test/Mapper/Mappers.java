@@ -8,7 +8,7 @@ import java.util.List;
 public interface Mappers {
 
     // 修改数据（按 ID 修改，不能修改 ID 本身）
-    @Update("UPDATE `${tableName}` SET name = #{user.name}, age = #{user.age} WHERE id = #{user.id}")
+    @Update("UPDATE `${tableName}` SET name = #{user.name}, score = #{user.score} WHERE id = #{user.id}")
     void update(@Param("tableName") String tableName, @Param("user") User user);
 
     // 删除数据

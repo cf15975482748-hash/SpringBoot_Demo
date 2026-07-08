@@ -15,16 +15,10 @@ public interface TableAuthMapper {
     @Update("UPDATE information_schema.tables SET table_comment = #{allowStudent} WHERE table_schema = (SELECT DATABASE()) AND table_name = #{tableName}")
     void updateAllowStudentComment(@Param("tableName") String tableName, @Param("allowStudent") String allowStudent);
     
-    // 由于 MyBatis 不好直接操作表的元数据字段，我们直接在业务表里加字段更稳妥。
-    // 在 SearchMapper 中已经规划了字段，这里是针对业务表数据的操作。
-    
     @Update("UPDATE `${tableName}` SET allow_student = #{allowStudent}")
     void updateTableWhitelist(@Param("tableName") String tableName, @Param("allowStudent") String allowStudent);
 
     // 根据登录老师账号，查询所有自己创建的业务表
-    // 我们需要从 information_schema 或者通过一个记录表来查。
-    // 按照需求，业务表增加了 create_user 字段，但这个字段是存在表里的，不是元数据。
-    // 实际上，老师创建的所有表，其 create_user 字段在所有行都是一样的。
     @Select("SELECT table_name FROM information_schema.columns " +
             "WHERE table_schema = (SELECT DATABASE()) " +
             "AND column_name = 'create_user' " +

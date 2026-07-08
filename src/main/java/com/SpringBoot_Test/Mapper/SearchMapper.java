@@ -28,7 +28,7 @@ public interface SearchMapper {
     @Update("CREATE TABLE IF NOT EXISTS `${tableName}` (" +
             "id INT PRIMARY KEY AUTO_INCREMENT, " +
             "name VARCHAR(255), " +
-            "age INT, " +
+            "score FLOAT DEFAULT 0.0, " +
             "create_user VARCHAR(100), " +
             "allow_student TEXT)")
     void createTable(@Param("tableName") String tableName);
