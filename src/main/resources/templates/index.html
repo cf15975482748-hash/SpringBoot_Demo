@@ -18,13 +18,11 @@
         
         .modal-header { background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; }
         
-        /* 统一选择和删除表格的布局 */
         .management-card { display: flex; flex-direction: column; justify-content: space-between; }
         .management-form { display: flex; align-items: center; gap: 10px; height: 45px; }
         .management-form select { height: 45px; }
         .management-form .btn { height: 45px; min-width: 60px; white-space: nowrap; }
 
-        /* 错误漂浮窗样式 */
         #errorToast {
             position: fixed;
             bottom: -100px;
@@ -43,19 +41,38 @@
             font-weight: 500;
         }
         #errorToast.show { bottom: 30px; }
+        .navbar { margin-bottom: 20px; border-radius: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <!-- 顶部导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
+        <a class="navbar-brand fw-bold" href="#">项目管理系统</a>
+        <div class="ms-auto d-flex align-items-center">
+            <span class="navbar-text me-3" th:text="${session.loginUser.realName} + ' (' + ${session.loginRole} + ')'">用户 (角色)</span>
+            <a th:if="${session.loginRole == 'admin'}" href="/account-manage" class="btn btn-outline-info btn-sm me-2">账号管理</a>
+            <button th:if="${session.loginRole == 'student'}" class="btn btn-outline-warning btn-sm me-2" data-bs-toggle="modal" data-bs-target="#changePwdModal">修改密码</button>
+            <a href="/logout" class="btn btn-outline-light btn-sm">退出登录</a>
+        </div>
+    </nav>
+
     <div class="header">
         <div>
             <h2 class="text-primary fw-bold">数据库管理系统</h2>
-            <p class="text-muted mb-0">当前表：<span class="badge bg-info text-dark" th:text="${currentTable}">user</span></p>
+            <p class="text-muted mb-0">
+                当前表：<span class="badge bg-info text-dark" th:text="${currentTable}">user</span>
+                <span th:if="${tableAuthInfo != null}" class="ms-2 small">
+                    <span th:if="${session.loginRole == 'admin' || (session.loginRole == 'teacher' && session.username == tableAuthInfo['createUser'])}">
+                        白名单：<span class="text-success" th:text="${tableAuthInfo['allowStudent'] ?: '无'}"></span>
+                    </span>
+                </span>
+            </p>
         </div>
         <div class="text-end d-flex gap-2">
-            <button type="button" class="btn btn-primary btn-custom" data-bs-toggle="modal" data-bs-target="#addDataModal" th:if="${not #lists.isEmpty(tables)}">添加数据</button>
-            <button type="button" class="btn btn-success btn-custom" data-bs-toggle="modal" data-bs-target="#createTableModal">新建表格</button>
+            <button th:if="${session.loginRole != 'student'}" type="button" class="btn btn-primary btn-custom" data-bs-toggle="modal" data-bs-target="#addDataModal" th:disabled="${currentTable == '无' || currentTable == 'admin' || currentTable == 'teacher' || currentTable == 'student'}">添加数据</button>
+            <button th:if="${session.loginRole != 'student'}" type="button" class="btn btn-success btn-custom" data-bs-toggle="modal" data-bs-target="#createTableModal">新建表格</button>
             <a href="/" class="btn btn-outline-primary btn-custom">刷新数据</a>
         </div>
     </div>
@@ -80,7 +97,7 @@
         </div>
     </div>
 
-    <!-- 表格管理部分：下拉框查询和删除 -->
+    <!-- 表格管理部分 -->
     <div class="row" th:if="${not #lists.isEmpty(tables)}">
         <div class="col-md-6">
             <div class="card p-3 management-card">
@@ -92,19 +109,20 @@
                                 th:text="${table}" 
                                 th:selected="${table == currentTable}"></option>
                     </select>
-                    <!-- 占位符，保持对齐 -->
-                    <div style="width: 60px;" class="d-none d-lg-block"></div>
+                    <button th:if="${session.loginRole == 'teacher' && tableAuthInfo != null && session.username == tableAuthInfo['createUser']}" 
+                            type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#whitelistModal">白名单</button>
                 </form>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6" th:if="${session.loginRole != 'student'}">
             <div class="card p-3 management-card">
                 <h5 class="card-title fw-bold text-danger">删除表格</h5>
                 <form th:action="@{/deleteTable}" method="post" class="management-form" id="deleteTableForm">
                     <select name="tableName" class="form-select" id="deleteTableSelect">
-                        <option th:each="table : ${tables}" th:value="${table}" th:text="${table}"></option>
+                        <option th:each="table : ${tables}" 
+                                th:if="${table != 'admin' && table != 'teacher' && table != 'student'}"
+                                th:value="${table}" th:text="${table}"></option>
                     </select>
-                    <!-- 修改为仅打开模态框，不直接提交 -->
                     <button type="button" class="btn btn-danger btn-custom" data-bs-toggle="modal" data-bs-target="#deleteTableConfirmModal" onclick="prepareDeleteTable()">删除</button>
                 </form>
             </div>
@@ -128,8 +146,8 @@
                     <td th:text="${user.name}">张三</td>
                     <td th:text="${user.age}">20</td>
                     <td class="text-center">
-                        <!-- 核心修复：改用 data- 属性传递数据，避免 inline JS 渲染和转义问题 -->
-                        <button type="button" class="btn btn-sm btn-primary btn-custom edit-btn" 
+                        <button th:if="${session.loginRole != 'student' && currentTable != 'admin' && currentTable != 'teacher' && currentTable != 'student'}" 
+                                type="button" class="btn btn-sm btn-primary btn-custom edit-btn" 
                                 data-bs-toggle="modal" data-bs-target="#editDataModal"
                                 th:data-id="${user.id}"
                                 th:data-name="${user.name}"
@@ -142,6 +160,41 @@
                 </tr>
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- 修改密码 Modal (Student) -->
+<div class="modal fade" id="changePwdModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5>修改登录密码</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form th:action="@{/student/updatePassword}" method="post">
+                <div class="modal-body">
+                    <div class="mb-3"><label class="form-label">新密码</label><input type="password" name="newPassword" class="form-control" required></div>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">确认修改</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 配置白名单 Modal (Teacher) -->
+<div class="modal fade" id="whitelistModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5>配置学生白名单</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form th:action="@{/teacher/updateWhitelist}" method="post">
+                <input type="hidden" name="tableName" th:value="${currentTable}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">学生账号 (逗号分隔)</label>
+                        <textarea name="studentList" class="form-control" rows="3" placeholder="例如: student1,student2" 
+                                  th:text="${tableAuthInfo != null ? tableAuthInfo['allowStudent'] : ''}"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">保存配置</button></div>
+            </form>
+        </div>
     </div>
 </div>
 
